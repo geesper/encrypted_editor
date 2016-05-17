@@ -1,0 +1,41 @@
+{
+  "note_version": "1.0",
+  "encrypted_item": [
+    {
+      "name": "Example name",
+      "id": 1,
+      "login": {
+        "username": "user",
+        "password": "password"
+      },
+      "text": "here's the text"
+    },
+    {
+      "name": "Example name 2",
+      "id": 2,
+      "login": {
+        "username": "user 2",
+        "password": "password2"
+      },
+      "text": "here's second text"
+    },
+    {
+      "name": "Example name 3",
+      "id": 3,
+      "login": {
+        "username": "user three",
+        "password": "password3"
+      },
+      "text": "here's threeeee text"
+    },
+    {
+      "name": "Example name fore",
+      "id": 4,
+      "login": {
+        "username": "user 2",
+        "password": "password4"
+      },
+      "text": "here's another text, but it's number four"
+    }
+  ]
+}

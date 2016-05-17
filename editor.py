@@ -81,7 +81,7 @@ class MyWindow(Gtk.Window):
            self.sidebar_locked = True
        if self.sidebar_locked == True:
            self.sidebar_select_number(self.sidebar_current_selection)
-           print "skipping"
+           print("skipping")
        else:
           path = Gtk.TreePath(value2)
           treeiter = self.listmodel.get_iter(path)
@@ -107,7 +107,7 @@ class MyWindow(Gtk.Window):
        print('bah')
 
    def sidebar_select_number(self, number):
-       print "selecting item in sidebar : %s" %(number)
+       print("selecting item in sidebar : %s" %(number))
        path = Gtk.TreePath(number)
        select = self.side_bar_box.get_selection()
        select.select_path(path)
@@ -184,13 +184,13 @@ class MyWindow(Gtk.Window):
                     self.current_item = value
               self.populate_fields()
               self.sidebar_current_selection = len(self.listmodel) - 1
-              print "Saved new item"
+              print("Saved new item")
        #    self.data.append[]
        if not self.current_item == None:
           self.current_item['login']['username'] = self.username_text.get_text()
           self.current_item['login']['password'] = self.password_text.get_text()
           self.current_item['text'] = self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False)
-          print "Saved existing item"
+          print("Saved existing item")
           print(str(self.current_item))
        print("Save clicked")
 

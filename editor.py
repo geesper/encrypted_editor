@@ -36,7 +36,7 @@ class MyWindow(Gtk.Window):
        self.cancel_button.connect("clicked", self.cancel_button_clicked)
        self.save_cancel_area.add(self.save_button)
        self.save_cancel_area.attach_next_to(self.cancel_button, self.save_button, Gtk.PositionType.RIGHT, 1, 1)
-       #self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
+       self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
 
 
    def create_password_area(self):
@@ -56,8 +56,6 @@ class MyWindow(Gtk.Window):
        self.password_area.attach_next_to(self.password_text, password_label, Gtk.PositionType.RIGHT, 1, 1)
        self.password_area.attach_next_to(show_password, self.password_text, Gtk.PositionType.RIGHT, 1, 1)
        self.grid.attach(self.password_area, 1, 0, 1, 1)
-       #self.password_area.visible = False
-       #self.password_area.
 
 
 
@@ -98,7 +96,7 @@ class MyWindow(Gtk.Window):
               self.sidebar_select_number(self.sidebar_current_selection)
           else:
              for value in self.data['encrypted_item']:
-                if value['name'] == label_name:
+                if str(value['id']) == label_value:
                    self.current_item = value
              self.populate_fields()
              self.sidebar_current_selection = value2
@@ -130,9 +128,8 @@ class MyWindow(Gtk.Window):
    def show_password(self, button):
         value = button.get_active()
         self.password_text.set_visibility(value)
-        #self.sidebar_locked = False
-        self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
-        self.grid.show_all()
+        #self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
+        #self.grid.show_all()
 
 
    def populate_fields(self):
@@ -185,7 +182,6 @@ class MyWindow(Gtk.Window):
               self.populate_fields()
               self.sidebar_current_selection = len(self.listmodel) - 1
               print("Saved new item")
-       #    self.data.append[]
        if not self.current_item == None:
           self.current_item['login']['username'] = self.username_text.get_text()
           self.current_item['login']['password'] = self.password_text.get_text()
@@ -198,7 +194,9 @@ class MyWindow(Gtk.Window):
        self.sidebar_locked = False
        if self.current_item == None:
            treeiter = self.listmodel.get_iter(self.sidebar_current_selection)
-           #self.sidebar_current_selection = len(self.listmodel) - 1
+           self.username_text.set_text('')
+           self.password_text.set_text('')
+           self.textbuffer.set_text('')
            self.sidebar_current_selection = None
            self.listmodel.remove(treeiter)
        if not self.current_item == None:

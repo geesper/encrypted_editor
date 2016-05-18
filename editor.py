@@ -12,6 +12,7 @@ load_file = 'encrypted_file_example.txt'
 
 class MyWindow(Gtk.Window):
    def __init__(self):
+
       Gtk.Window.__init__(self, title="Encrypted Notebook")
       self.grid = Gtk.Grid()
       # Load in data:
@@ -21,17 +22,26 @@ class MyWindow(Gtk.Window):
       self.create_notes_area()
       self.create_save_cancel()
       self.add(self.grid)
-      self.current_item = None
-      self.sidebar_current_selection = 0
-      self.sidebar_locked = False
 
       # Used for the clipboard:
       self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+      self.clipboard_mouse = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
+
+      # Initial variables set
+      self.current_item = None
+      self.sidebar_current_selection = 0
+      self.sidebar_locked = False
+      #self.attach_select_function()
 
 
    def startup(self):
        win.show_all()
        self.save_cancel_area.hide()
+       self.password_area.hide()
+
+   def attach_select_function(self):
+       yeah = self.side_bar_box.get_selection()
+       yeah.set_select_function(self.selection_enabled, None)
 
    def create_save_cancel(self):
        self.save_cancel_area = Gtk.Grid()
@@ -94,20 +104,38 @@ class MyWindow(Gtk.Window):
        renderer = Gtk.CellRendererText()
        column = Gtk.TreeViewColumn("Title", renderer, text=0)
        self.side_bar_box.append_column(column)
-       self.side_bar_box.connect("row-activated", self.side_bar_button_clicked)
+       self.row_activation_id = self.side_bar_box.connect("row-activated", self.side_bar_button_clicked)
+       self.side_bar_box.connect("button_release_event", self.side_bar_button_right_clicked)
        self.side_bar_box.set_activate_on_single_click(True)
        self.grid.attach(self.side_bar_box, 0, 0, 1,2)
        deselect = self.side_bar_box.get_selection()
-       #deselect.unselect_all()
+       self.side_bar_box.set_rubber_banding(False)
+
+
+   def side_bar_button_right_clicked(self, value1, value2):
+       if value2.button == 3:
+          self.sidebar_select_number(self.sidebar_current_selection)
+          print("Right clicked")
+          tree_sel = self.side_bar_box.get_selection()
+          (name, stuff) = tree_sel.get_selected()
+          print(str(name))
+          print(name.get_value(stuff, 0))
+          return
 
 
    def side_bar_button_clicked(self, value1, value2, value3):
        if self.needs_saving() == True:
            self.sidebar_locked = True
        if self.sidebar_locked == True:
-           self.sidebar_select_number(self.sidebar_current_selection)
-           print("skipping")
+          #yeah = self.side_bar_box.get_selection()
+          #yeah.set_select_function(self.return_false, None)
+          self.side_bar_box.handler_block(self.row_activation_id)
+          #self.sidebar_select_number(self.sidebar_current_selection)
+          print("skipping")
        else:
+          #yeah = self.side_bar_box.get_selection()
+          #yeah.set_select_function(self.side_bar_button_clicked, None)
+          self.side_bar_box.handler_unblock(self.row_activation_id)
           path = Gtk.TreePath(value2)
           treeiter = self.listmodel.get_iter(path)
           label_name = self.listmodel.get_value(treeiter, 0)
@@ -128,8 +156,19 @@ class MyWindow(Gtk.Window):
              self.populate_fields()
              self.sidebar_current_selection = value2
 
-   def bah(self, thing, thing2, thing3):
+
+   def selection_enabled(self):
+      if self.sidebar_locked == False:
+          #yeah = self.side_bar_box.get_selection()
+          #yeah.set_select_function(self.sidebar_selection_method)
+          #self.side_bar_box.handler_unblock(self.row_activation_id)
+          return False
+      print('bah')
+      return True
+
+   def bah2(self, thing, thing2, thing3):
        print('bah')
+
 
    def sidebar_select_number(self, number):
        print("selecting item in sidebar : %s" %(number))
@@ -151,6 +190,7 @@ class MyWindow(Gtk.Window):
 
    def copy_password(self, thing):
        self.clipboard.set_text(self.password_text.get_text(), -1)
+       self.clipboard_mouse.set_text(self.password_text.get_text(), -1)
        print("Copied!")
 
    def show_password(self, button):
@@ -167,6 +207,10 @@ class MyWindow(Gtk.Window):
           self.username_text.set_text(self.current_item['login']['username'])
           self.password_text.set_text(self.current_item['login']['password'])
           self.textbuffer.set_text(self.current_item['text'])
+       if self.username_text.get_text() == '' and self.password_text.get_text() == '':
+          self.password_area.hide()
+       else:
+          self.password_area.show()
 
    def load_data_from_file(self, file_name):
        encrypted_file = open(file_name)

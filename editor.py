@@ -28,6 +28,11 @@ class MyWindow(Gtk.Window):
       # Used for the clipboard:
       self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
 
+
+   def startup(self):
+       win.show_all()
+       self.save_cancel_area.hide()
+
    def create_save_cancel(self):
        self.save_cancel_area = Gtk.Grid()
        self.save_button = Gtk.Button(label="Save")
@@ -37,15 +42,18 @@ class MyWindow(Gtk.Window):
        self.save_cancel_area.add(self.save_button)
        self.save_cancel_area.attach_next_to(self.cancel_button, self.save_button, Gtk.PositionType.RIGHT, 1, 1)
        self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
+       self.save_cancel_area.do_unmap(self.save_cancel_area)
 
 
    def create_password_area(self):
        username_label = Gtk.Label(label="User name")
        self.username_text = Gtk.Entry()
+       self.username_text.connect("changed", self.edit_changed)
        password_label = Gtk.Label(label="Password")
        self.password_text = Gtk.Entry()
        self.password_text.set_visibility(False)
        self.password_text.connect("copy-clipboard", self.copy_password)
+       self.password_text.connect("changed", self.edit_changed)
        show_password = Gtk.CheckButton("show")
        show_password.connect("toggled", self.show_password)
        show_password.set_active(False)
@@ -57,7 +65,23 @@ class MyWindow(Gtk.Window):
        self.password_area.attach_next_to(show_password, self.password_text, Gtk.PositionType.RIGHT, 1, 1)
        self.grid.attach(self.password_area, 1, 0, 1, 1)
 
+   def edit_changed(self, widget):
+       if self.needs_saving() == True:
+           self.show_save()
+       else:
+           self.hide_save()
+       print("OK - changeds")
 
+
+   def show_save(self):
+       self.save_cancel_area.show()
+       print("gott save")
+
+   def hide_save(self):
+       self.save_cancel_area.hide()
+       print("gotta hide")
+       #self.grid.r
+       #self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
 
    def create_side_bar(self):
        self.listmodel = Gtk.ListStore(str, str)
@@ -73,6 +97,9 @@ class MyWindow(Gtk.Window):
        self.side_bar_box.connect("row-activated", self.side_bar_button_clicked)
        self.side_bar_box.set_activate_on_single_click(True)
        self.grid.attach(self.side_bar_box, 0, 0, 1,2)
+       deselect = self.side_bar_box.get_selection()
+       #deselect.unselect_all()
+
 
    def side_bar_button_clicked(self, value1, value2, value3):
        if self.needs_saving() == True:
@@ -118,7 +145,8 @@ class MyWindow(Gtk.Window):
        self.grid.attach(self.scrolledwindow, 1, 1, 1, 1)
        self.textview = Gtk.TextView()
        self.textbuffer = self.textview.get_buffer()
-       self.textbuffer.set_text("OK")
+       #self.textbuffer.set_text()
+       self.textbuffer.connect("changed", self.edit_changed)
        self.scrolledwindow.add(self.textview)
 
    def copy_password(self, thing):
@@ -128,8 +156,6 @@ class MyWindow(Gtk.Window):
    def show_password(self, button):
         value = button.get_active()
         self.password_text.set_visibility(value)
-        #self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
-        #self.grid.show_all()
 
 
    def populate_fields(self):
@@ -150,14 +176,20 @@ class MyWindow(Gtk.Window):
 
    def needs_saving(self):
        if self.current_item == None:
-           return False
-       if self.current_item['login']['username'] != self.username_text.get_text():
-           return True
-       if self.current_item['login']['password'] != self.password_text.get_text():
-           return True
-       print(str(self.textbuffer.get_bounds()))
-       if self.current_item['text'] != self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False):
-           return True
+           if self.username_text.get_text() != '':
+               return True
+           if self.password_text.get_text() != '':
+               return True
+           if self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False) != '':
+               return True
+       else:
+          if self.current_item['login']['username'] != self.username_text.get_text():
+             return True
+          if self.current_item['login']['password'] != self.password_text.get_text():
+             return True
+          print(str(self.textbuffer.get_bounds()))
+          if self.current_item['text'] != self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False):
+             return True
        return False
 
 
@@ -180,7 +212,7 @@ class MyWindow(Gtk.Window):
                  if value['id'] == new_item['id']:
                     self.current_item = value
               self.populate_fields()
-              self.sidebar_current_selection = len(self.listmodel) - 1
+              self.sidebar_current_selection = len(self.listmodel - 1)
               print("Saved new item")
        if not self.current_item == None:
           self.current_item['login']['username'] = self.username_text.get_text()
@@ -193,12 +225,13 @@ class MyWindow(Gtk.Window):
    def cancel_button_clicked(self, widget):
        self.sidebar_locked = False
        if self.current_item == None:
-           treeiter = self.listmodel.get_iter(self.sidebar_current_selection)
+           #treeiter = self.listmodel.get_iter(self.sidebar_current_selection)
            self.username_text.set_text('')
            self.password_text.set_text('')
            self.textbuffer.set_text('')
            self.sidebar_current_selection = None
-           self.listmodel.remove(treeiter)
+           #self.listmodel.remove(treeiter)
+           self.remove_bad_sidebar_entries()
        if not self.current_item == None:
           self.username_text.set_text(self.current_item['login']['username'])
           self.password_text.set_text(self.current_item['login']['password'])
@@ -208,15 +241,18 @@ class MyWindow(Gtk.Window):
 
 
    def remove_bad_sidebar_entries(self):
-      for i in range(1, (len(self.listmodel) - 1)):
+      for i in range(1, (len(self.listmodel))):
          path = Gtk.TreePath(i)
          treeiter = self.listmodel.get_iter(path)
          label_name = self.listmodel.get_value(treeiter, 0)
+         label_value = self.listmodel.get_value(treeiter, 1)
          found = False
          for item in self.data['encrypted_item']:
-             if item['name'] == label_name:
+             if str(item['id']) == label_value:
+                 print("Found %s" %(label_value))
                  found = True
          if found == False:
+             print("values didn't match: %s " %(label_value) )
              self.listmodel.remove(treeiter)
 
    def get_next_id_number(self):
@@ -240,5 +276,5 @@ class DialogExample(Gtk.Dialog):
 
 win = MyWindow()
 win.connect("delete-event", Gtk.main_quit)
-win.show_all()
+win.startup()
 Gtk.main()

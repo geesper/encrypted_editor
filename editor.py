@@ -31,17 +31,12 @@ class MyWindow(Gtk.Window):
       self.current_item = None
       self.sidebar_current_selection = 0
       self.sidebar_locked = False
-      #self.attach_select_function()
 
 
    def startup(self):
        win.show_all()
        self.save_cancel_area.hide()
        self.password_area.hide()
-
-   def attach_select_function(self):
-       yeah = self.side_bar_box.get_selection()
-       yeah.set_select_function(self.selection_enabled, None)
 
    def create_save_cancel(self):
        self.save_cancel_area = Gtk.Grid()
@@ -78,9 +73,12 @@ class MyWindow(Gtk.Window):
    def edit_changed(self, widget):
        if self.needs_saving() == True:
            self.show_save()
+           self.sidebar_locked = True
+           print("contents changed")
        else:
            self.hide_save()
-       print("OK - changeds")
+           self.sidebar_locked = False
+           print("contents are good now")
 
 
    def show_save(self):
@@ -90,8 +88,6 @@ class MyWindow(Gtk.Window):
    def hide_save(self):
        self.save_cancel_area.hide()
        print("gotta hide")
-       #self.grid.r
-       #self.grid.attach_next_to(self.save_cancel_area, self.scrolledwindow, Gtk.PositionType.BOTTOM, 1,1)
 
    def create_side_bar(self):
        self.listmodel = Gtk.ListStore(str, str)
@@ -104,12 +100,15 @@ class MyWindow(Gtk.Window):
        renderer = Gtk.CellRendererText()
        column = Gtk.TreeViewColumn("Title", renderer, text=0)
        self.side_bar_box.append_column(column)
+       yeah = self.side_bar_box.get_selection()
+       yeah.set_select_function(self.bah, None)
        self.row_activation_id = self.side_bar_box.connect("row-activated", self.side_bar_button_clicked)
        self.side_bar_box.connect("button_release_event", self.side_bar_button_right_clicked)
        self.side_bar_box.set_activate_on_single_click(True)
        self.grid.attach(self.side_bar_box, 0, 0, 1,2)
+
        deselect = self.side_bar_box.get_selection()
-       self.side_bar_box.set_rubber_banding(False)
+
 
 
    def side_bar_button_right_clicked(self, value1, value2):
@@ -124,17 +123,12 @@ class MyWindow(Gtk.Window):
 
 
    def side_bar_button_clicked(self, value1, value2, value3):
+       self.textview.set_editable(True)
        if self.needs_saving() == True:
            self.sidebar_locked = True
        if self.sidebar_locked == True:
-          #yeah = self.side_bar_box.get_selection()
-          #yeah.set_select_function(self.return_false, None)
-          self.side_bar_box.handler_block(self.row_activation_id)
-          #self.sidebar_select_number(self.sidebar_current_selection)
           print("skipping")
        else:
-          #yeah = self.side_bar_box.get_selection()
-          #yeah.set_select_function(self.side_bar_button_clicked, None)
           self.side_bar_box.handler_unblock(self.row_activation_id)
           path = Gtk.TreePath(value2)
           treeiter = self.listmodel.get_iter(path)
@@ -142,13 +136,16 @@ class MyWindow(Gtk.Window):
           label_value = self.listmodel.get_value(treeiter, 1)
           print(label_name)
           print(label_value)
-          self.current_item = None
           if label_value == "Add New Entry":
+              print("You clicked new entry")
               self.listmodel.append(["New Entry", "none"])
-              self.sidebar_locked = True
+              self.current_item = "Adding New Entry"
               self.populate_fields()
+              self.show_save()
               self.sidebar_current_selection = len(self.listmodel) - 1
+              self.sidebar_locked = False # Included to force selection to change to the "New entry" on the sidebar
               self.sidebar_select_number(self.sidebar_current_selection)
+              self.sidebar_locked = True
           else:
              for value in self.data['encrypted_item']:
                 if str(value['id']) == label_value:
@@ -157,17 +154,16 @@ class MyWindow(Gtk.Window):
              self.sidebar_current_selection = value2
 
 
-   def selection_enabled(self):
-      if self.sidebar_locked == False:
+   def bah(self, value1, value2, value3, value4, value5):
+      if self.sidebar_locked == True:
           #yeah = self.side_bar_box.get_selection()
-          #yeah.set_select_function(self.sidebar_selection_method)
+          #yeah.set_select_function(self.bah2, None)
           #self.side_bar_box.handler_unblock(self.row_activation_id)
+          print('bah_false')
           return False
-      print('bah')
-      return True
-
-   def bah2(self, thing, thing2, thing3):
-       print('bah')
+      else:
+         print('bah_true')
+         return True
 
 
    def sidebar_select_number(self, number):
@@ -184,9 +180,9 @@ class MyWindow(Gtk.Window):
        self.grid.attach(self.scrolledwindow, 1, 1, 1, 1)
        self.textview = Gtk.TextView()
        self.textbuffer = self.textview.get_buffer()
-       #self.textbuffer.set_text()
        self.textbuffer.connect("changed", self.edit_changed)
        self.scrolledwindow.add(self.textview)
+       self.textview.set_editable(False)
 
    def copy_password(self, thing):
        self.clipboard.set_text(self.password_text.get_text(), -1)
@@ -199,7 +195,7 @@ class MyWindow(Gtk.Window):
 
 
    def populate_fields(self):
-       if self.current_item == None:
+       if self.current_item == None or self.current_item == "Adding New Entry":
           self.username_text.set_text('')
           self.password_text.set_text('')
           self.textbuffer.set_text('')
@@ -219,6 +215,8 @@ class MyWindow(Gtk.Window):
        print(self.data['note_version'])
 
    def needs_saving(self):
+       if self.textview.get_editable == False:
+           return False
        if self.current_item == None:
            if self.username_text.get_text() != '':
                return True
@@ -226,6 +224,10 @@ class MyWindow(Gtk.Window):
                return True
            if self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False) != '':
                return True
+           #return True
+       elif self.current_item == "Adding New Entry":
+           print("Adding new entry always needs to be saved")
+           return True
        else:
           if self.current_item['login']['username'] != self.username_text.get_text():
              return True
@@ -240,7 +242,8 @@ class MyWindow(Gtk.Window):
 
    def save_button_clicked(self, widget):
        self.sidebar_locked = False
-       if self.current_item == None:
+       if self.current_item == "Adding New Entry":
+           print "Trying to save a new entry..."
            if self.sidebar_current_selection != None:
               new_item = {}
               new_item['name'] = "OK"
@@ -251,13 +254,17 @@ class MyWindow(Gtk.Window):
               new_item['login']['password'] = self.password_text.get_text()
               self.listmodel.append([new_item['name'], str(new_item['id'])])
               self.data['encrypted_item'].append(new_item)
-              self.remove_bad_sidebar_entries()
               for value in self.data['encrypted_item']:
                  if value['id'] == new_item['id']:
                     self.current_item = value
               self.populate_fields()
-              self.sidebar_current_selection = len(self.listmodel - 1)
+              self.sidebar_current_selection = len(self.listmodel) - 1
+              self.sidebar_select_number(self.sidebar_current_selection)
+              for value in self.data['encrypted_item']:
+                 if str(value['id']) == new_item['id']:
+                    self.current_item = value
               print("Saved new item")
+              self.remove_bad_sidebar_entries()
        if not self.current_item == None:
           self.current_item['login']['username'] = self.username_text.get_text()
           self.current_item['login']['password'] = self.password_text.get_text()
@@ -268,15 +275,13 @@ class MyWindow(Gtk.Window):
 
    def cancel_button_clicked(self, widget):
        self.sidebar_locked = False
-       if self.current_item == None:
-           #treeiter = self.listmodel.get_iter(self.sidebar_current_selection)
+       if self.current_item == "Adding New Entry":
            self.username_text.set_text('')
            self.password_text.set_text('')
            self.textbuffer.set_text('')
-           self.sidebar_current_selection = None
-           #self.listmodel.remove(treeiter)
+           #self.sidebar_current_selection = None
            self.remove_bad_sidebar_entries()
-       if not self.current_item == None:
+       else:
           self.username_text.set_text(self.current_item['login']['username'])
           self.password_text.set_text(self.current_item['login']['password'])
           self.textbuffer.set_text(self.current_item['text'])
@@ -285,7 +290,7 @@ class MyWindow(Gtk.Window):
 
 
    def remove_bad_sidebar_entries(self):
-      for i in range(1, (len(self.listmodel))):
+      for i in range(1, len(self.listmodel)):
          path = Gtk.TreePath(i)
          treeiter = self.listmodel.get_iter(path)
          label_name = self.listmodel.get_value(treeiter, 0)

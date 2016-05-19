@@ -279,7 +279,8 @@ class MyWindow(Gtk.Window):
            self.username_text.set_text('')
            self.password_text.set_text('')
            self.textbuffer.set_text('')
-           #self.sidebar_current_selection = None
+           self.sidebar_current_selection = None
+           self.current_item = None
            self.remove_bad_sidebar_entries()
        else:
           self.username_text.set_text(self.current_item['login']['username'])

@@ -21,6 +21,7 @@ class MyWindow(Gtk.Window):
       self.create_side_bar()
       self.create_notes_area()
       self.create_save_cancel()
+      self.create_right_click_menu()
       self.add(self.grid)
 
       # Used for the clipboard:
@@ -107,19 +108,29 @@ class MyWindow(Gtk.Window):
        self.side_bar_box.set_activate_on_single_click(True)
        self.grid.attach(self.side_bar_box, 0, 0, 1,2)
 
-       deselect = self.side_bar_box.get_selection()
+   def create_right_click_menu(self):
+      self.right_click_menu = Gtk.Menu()
+      add_password = Gtk.MenuItem("Add Password")
+      add_password.connect("button_release_event", self.add_password)
+      self.right_click_menu.append(add_password)
+      self.right_click_menu.show_all()
 
-
+   def add_password(self, widget, yeah):
+      self.password_area.show()
+      print("add password")
 
    def side_bar_button_right_clicked(self, value1, value2):
        if value2.button == 3:
-          self.sidebar_select_number(self.sidebar_current_selection)
+          print(self.sidebar_current_selection)
+          if self.sidebar_current_selection != None:
+             self.sidebar_select_number(self.sidebar_current_selection)
+             tree_sel = self.side_bar_box.get_selection()
+             (name, stuff) = tree_sel.get_selected()
+             print(str(name))
+             self.right_click_menu.popup(None, None, None, None, 0, Gtk.get_current_event_time())
+             print(name.get_value(stuff, 0))
           print("Right clicked")
-          tree_sel = self.side_bar_box.get_selection()
-          (name, stuff) = tree_sel.get_selected()
-          print(str(name))
-          print(name.get_value(stuff, 0))
-          return
+          return False
 
 
    def side_bar_button_clicked(self, value1, value2, value3):
@@ -188,7 +199,8 @@ class MyWindow(Gtk.Window):
        self.clipboard.set_text(self.password_text.get_text(), -1)
        self.clipboard_mouse.set_text(self.password_text.get_text(), -1)
        print("Copied!")
-
+   
+   # This will display/unhide the text in the password field.
    def show_password(self, button):
         value = button.get_active()
         self.password_text.set_visibility(value)
@@ -243,7 +255,7 @@ class MyWindow(Gtk.Window):
    def save_button_clicked(self, widget):
        self.sidebar_locked = False
        if self.current_item == "Adding New Entry":
-           print "Trying to save a new entry..."
+           print("Trying to save a new entry...")
            if self.sidebar_current_selection != None:
               new_item = {}
               new_item['name'] = "OK"
@@ -280,8 +292,10 @@ class MyWindow(Gtk.Window):
            self.password_text.set_text('')
            self.textbuffer.set_text('')
            self.sidebar_current_selection = None
+           self.password_area.hide()
            self.current_item = None
            self.remove_bad_sidebar_entries()
+           deselect = self.side_bar_box.get_selection()
        else:
           self.username_text.set_text(self.current_item['login']['username'])
           self.password_text.set_text(self.current_item['login']['password'])
@@ -292,18 +306,21 @@ class MyWindow(Gtk.Window):
 
    def remove_bad_sidebar_entries(self):
       for i in range(1, len(self.listmodel)):
-         path = Gtk.TreePath(i)
-         treeiter = self.listmodel.get_iter(path)
-         label_name = self.listmodel.get_value(treeiter, 0)
-         label_value = self.listmodel.get_value(treeiter, 1)
-         found = False
-         for item in self.data['encrypted_item']:
-             if str(item['id']) == label_value:
-                 print("Found %s" %(label_value))
-                 found = True
-         if found == False:
-             print("values didn't match: %s " %(label_value) )
-             self.listmodel.remove(treeiter)
+         try:
+            path = Gtk.TreePath(i)
+            treeiter = self.listmodel.get_iter(path)
+            label_name = self.listmodel.get_value(treeiter, 0)
+            label_value = self.listmodel.get_value(treeiter, 1)
+            found = False
+            for item in self.data['encrypted_item']:
+                if str(item['id']) == label_value:
+                    print("Found %s" %(label_value))
+                    found = True
+            if found == False:
+                print("values didn't match: %s " %(label_value) )
+                self.listmodel.remove(treeiter)
+         except Exception:
+            pass # index may not be present because we removed it already.
 
    def get_next_id_number(self):
        id = 0
@@ -312,6 +329,8 @@ class MyWindow(Gtk.Window):
                id = int(data['id'])
        return(id + 1)
 
+
+       
 
 class DialogExample(Gtk.Dialog):
     def __init__(self, parent):
@@ -323,6 +342,8 @@ class DialogExample(Gtk.Dialog):
         box = self.get_content_area()
         box.add(label)
         self.show_all()
+
+
 
 win = MyWindow()
 win.connect("delete-event", Gtk.main_quit)

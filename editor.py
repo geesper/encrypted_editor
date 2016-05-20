@@ -14,6 +14,7 @@ from Crypto import Random
 import os
 from StringIO import StringIO
 import operator
+import ast
 
 load_file = 'encrypted_file.txt'
 password = "password"
@@ -80,7 +81,7 @@ class MyWindow(Gtk.Window):
 
    def create_side_bar(self):
        self.listmodel = Gtk.ListStore(str, str)
-       self.listmodel.append(["Add New Entry", "Add New Entry"])
+       #self.listmodel.append(["Add New Entry", "Add New Entry"])
        for entry in self.data['encrypted_item']:
           self.listmodel.append([entry['name'], str(entry['id'])])
        self.side_bar_box = Gtk.TreeView.new_with_model(self.listmodel)
@@ -92,8 +93,9 @@ class MyWindow(Gtk.Window):
        renderer.connect("edited", self.side_bar_edited)
 
        # Setting sorting and title name:
-       column = Gtk.TreeViewColumn("Title", renderer, text=0)
+       column = Gtk.TreeViewColumn("List", renderer, text=0)
        column.set_sort_column_id(0)
+       column.set_resizable(True)
 
        # Setting up a side_bar function to control when the selection can change:
        self.side_bar_box.append_column(column)
@@ -125,8 +127,21 @@ class MyWindow(Gtk.Window):
       add_password = Gtk.MenuItem("Add Password")
       add_password.connect("button_release_event", self.add_password)
       self.right_click_menu.append(add_password)
+      add_entry = Gtk.MenuItem("Add New Entry")
+      add_entry.connect("button_release_event", self.add_entry)
+      self.right_click_menu.append(add_entry)
       self.right_click_menu.show_all()
 
+
+   def add_entry(self, widget, value):
+      self.listmodel.append(["New Entry", "none"])
+      self.current_item = "Adding New Entry"
+      self.populate_fields()
+      self.show_save()
+      self.sidebar_current_selection = len(self.listmodel) - 1
+      self.sidebar_locked = False # Included to force selection to change to the "New entry" on the sidebar
+      self.sidebar_select_number(self.sidebar_current_selection)
+      self.sidebar_locked = True
 
    # This is called to determine if the edit box was changed.
    def edit_changed(self, widget):
@@ -145,7 +160,7 @@ class MyWindow(Gtk.Window):
        self.save_cancel_area.hide()
 
    # Called by the right click menu, makes sure the username/password area is visible.
-   def add_password(self, widget, yeah):
+   def add_password(self, widget, value):
       self.password_area.show()
 
    # If the side_bar is right clicked, we move the selection back to where it should be.
@@ -199,7 +214,7 @@ class MyWindow(Gtk.Window):
 
    # If someone renames an entry, but then hits cancel, this reverts the name back:
    def sidebar_reset_edit(self):
-       if self.sidebar_reset_name != None:
+       if hasattr(self, 'sidebar_reset_name') and self.sidebar_reset_name != None:
            path = Gtk.TreePath(self.sidebar_current_selection)
            treeiter = self.listmodel.get_iter(path)
            self.listmodel.set_value(treeiter, 0, self.sidebar_reset_name)
@@ -225,7 +240,7 @@ class MyWindow(Gtk.Window):
        else:
           self.username_text.set_text(self.current_item['login']['username'])
           self.password_text.set_text(self.current_item['login']['password'])
-          self.textbuffer.set_text(self.current_item['text'])
+          self.textbuffer.set_text(self.current_item['text'], -1)
        if self.username_text.get_text() == '' and self.password_text.get_text() == '':
           self.password_area.hide()
        else:
@@ -282,12 +297,12 @@ class MyWindow(Gtk.Window):
               path = Gtk.TreePath(self.sidebar_current_selection)
               treeiter = self.listmodel.get_iter(path)
               label_name = self.listmodel.get_value(treeiter, 0)
-              new_item['name'] = label_name
-              new_item['id'] = self.get_next_id_number()
-              new_item['text'] = self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False)
-              new_item['login'] = {}
-              new_item['login']['username'] = self.username_text.get_text()
-              new_item['login']['password'] = self.password_text.get_text()
+              new_item["name"] = label_name
+              new_item["id"] = self.get_next_id_number()
+              new_item["text"] = str(self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False))
+              new_item["login"] = {}
+              new_item["login"]["username"] = self.username_text.get_text()
+              new_item["login"]["password"] = self.password_text.get_text()
               self.listmodel.append([new_item['name'], str(new_item['id'])])
               self.data['encrypted_item'].append(new_item)
               for value in self.data['encrypted_item']:
@@ -303,8 +318,13 @@ class MyWindow(Gtk.Window):
        if not self.current_item == None:
           self.current_item['login']['username'] = self.username_text.get_text()
           self.current_item['login']['password'] = self.password_text.get_text()
-          self.current_item['text'] = self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False)
-       self.encrypt(str(self.data), load_file, password)
+          self.current_item["text"] = self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False)
+       self.encrypt(json.dumps(self.data), load_file, password)
+       self.hide_save()
+       #yeah = open('junk.txt','w')
+       #yeah.write(str(self.data))
+       #yeah.close()
+
 
    def cancel_button_clicked(self, widget):
        self.sidebar_locked = False
@@ -327,7 +347,7 @@ class MyWindow(Gtk.Window):
    # This is used after hitting a cancel button to ensure all entries present
    # on the side_bar are actually present in self.data
    def remove_bad_sidebar_entries(self):
-      for i in range(1, len(self.listmodel)):
+      for i in range(0, len(self.listmodel)):
          try:
             path = Gtk.TreePath(i)
             treeiter = self.listmodel.get_iter(path)

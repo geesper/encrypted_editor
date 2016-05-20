@@ -3,16 +3,22 @@
 # http://www.objgen.com/json/models/Avn
 
 import json
+import yaml
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk
+from hashlib import md5
+from Crypto.Cipher import AES
+from Crypto import Random
 
-load_file = 'encrypted_file_example.txt'
+import os
+from StringIO import StringIO
 
+load_file = 'encrypted_file.txt'
+password = "password"
 
 class MyWindow(Gtk.Window):
    def __init__(self):
-
       Gtk.Window.__init__(self, title="Encrypted Notebook")
       self.grid = Gtk.Grid()
       # Load in data:
@@ -99,7 +105,10 @@ class MyWindow(Gtk.Window):
            self.listmodel.append([entry['name'], str(entry['id'])])
        self.side_bar_box = Gtk.TreeView.new_with_model(self.listmodel)
        renderer = Gtk.CellRendererText()
+       renderer.set_property("editable", True)
+       renderer.connect("edited", self.side_bar_edited)
        column = Gtk.TreeViewColumn("Title", renderer, text=0)
+       column.set_sort_column_id(0)
        self.side_bar_box.append_column(column)
        yeah = self.side_bar_box.get_selection()
        yeah.set_select_function(self.bah, None)
@@ -183,6 +192,14 @@ class MyWindow(Gtk.Window):
        select = self.side_bar_box.get_selection()
        select.select_path(path)
 
+   def sidebar_reset_edit(self):
+       if self.sidebar_reset_name != None:
+           path = Gtk.TreePath(self.sidebar_current_selection)
+           treeiter = self.listmodel.get_iter(path)
+           self.listmodel.set_value(treeiter, 0, self.sidebar_reset_name)
+           self.current_item['name'] = self.sidebar_reset_name
+           self.sidebar_reset_name = None
+           #label_value = self.listmodel.get_value(treeiter, 1)
 
    def create_notes_area(self):
        self.scrolledwindow = Gtk.ScrolledWindow()
@@ -221,10 +238,27 @@ class MyWindow(Gtk.Window):
           self.password_area.show()
 
    def load_data_from_file(self, file_name):
-       encrypted_file = open(file_name)
-       self.data = json.load(encrypted_file)
+       if not os.path.isfile(file_name):
+          content = open('encrypted_file_example.txt')
+          self.encrypt(content.read(), file_name, password)
+          #with open('encrypted_file_example.txt', 'rb') as in_file, open(file_name, 'wb') as out_file:
+          #  self.encrypt(in_file, out_file, password)
+       encrypted_file = self.decrypt(file_name, password)
+       #encrypted_file = open(file_name)
+       #self.data = json.load(encrypted_file)
+       #self.data = json.load(StringIO(encrypted_file))
+       self.data = yaml.safe_load(StringIO(encrypted_file))
        print(str(self.data))
        print(self.data['note_version'])
+
+   def side_bar_edited(self, widget, path, text):
+      self.listmodel[path][0] = text
+      self.sidebar_reset_name = self.current_item['name']
+      self.current_item['name'] = text
+      self.sidebar_locked = True
+      self.show_save()
+      print("Edited!")
+
 
    def needs_saving(self):
        if self.textview.get_editable == False:
@@ -254,11 +288,15 @@ class MyWindow(Gtk.Window):
 
    def save_button_clicked(self, widget):
        self.sidebar_locked = False
+       self.sidebar_reset_name = None
        if self.current_item == "Adding New Entry":
            print("Trying to save a new entry...")
            if self.sidebar_current_selection != None:
               new_item = {}
-              new_item['name'] = "OK"
+              path = Gtk.TreePath(self.sidebar_current_selection)
+              treeiter = self.listmodel.get_iter(path)
+              label_name = self.listmodel.get_value(treeiter, 0)
+              new_item['name'] = label_name
               new_item['id'] = self.get_next_id_number()
               new_item['text'] = self.textbuffer.get_text(self.textbuffer.get_start_iter(), self.textbuffer.get_end_iter(), False)
               new_item['login'] = {}
@@ -284,6 +322,10 @@ class MyWindow(Gtk.Window):
           print("Saved existing item")
           print(str(self.current_item))
        print("Save clicked")
+       yeah = open("out_file.txt", 'w')
+       yeah.write(str(self.data))
+       yeah.close()
+       self.encrypt(str(self.data), load_file, password)
 
    def cancel_button_clicked(self, widget):
        self.sidebar_locked = False
@@ -300,6 +342,7 @@ class MyWindow(Gtk.Window):
           self.username_text.set_text(self.current_item['login']['username'])
           self.password_text.set_text(self.current_item['login']['password'])
           self.textbuffer.set_text(self.current_item['text'])
+          self.sidebar_reset_edit()
        print(str(json.dumps(self.data)))
        print("Cancel clicked")
 
@@ -330,7 +373,86 @@ class MyWindow(Gtk.Window):
        return(id + 1)
 
 
-       
+
+
+   def encrypt(self, in_content, out_file_name, password, key_length=32):
+       print "I got this as content:"
+       print in_content
+       in_file = StringIO(in_content)
+       out_file = open(out_file_name, 'wb')
+       print("Encrypting...")
+       bs = AES.block_size
+       salt = Random.new().read(bs - len('Salted__'))
+       key, iv = derive_key_and_iv(password, salt, key_length, bs)
+       cipher = AES.new(key, AES.MODE_CBC, iv)
+       out_file.write('Salted__' + salt)
+       finished = False
+       while not finished:
+           chunk = in_file.read(1024 * bs)
+           if len(chunk) == 0 or len(chunk) % bs != 0:
+               padding_length = (bs - len(chunk) % bs) or bs
+               chunk += padding_length * chr(padding_length)
+               finished = True
+           out_file.write(cipher.encrypt(chunk))
+
+
+   def decrypt(self, file_name, password, key_length=32):
+       print("Decrypting...")
+       in_file = open(file_name, 'rb')
+       bs = AES.block_size
+       salt = in_file.read(bs)[len('Salted__'):]
+       key, iv = derive_key_and_iv(password, salt, key_length, bs)
+       cipher = AES.new(key, AES.MODE_CBC, iv)
+       next_chunk = ''
+       results = ''
+       finished = False
+       while not finished:
+           chunk, next_chunk = next_chunk, cipher.decrypt(in_file.read(1024 * bs))
+           if len(next_chunk) == 0:
+               padding_length = ord(chunk[-1])
+               chunk = chunk[:-padding_length]
+               finished = True
+           results = results + chunk
+       print("returning this:")
+       print(str(results))
+       return results
+
+   def decrypt_original(self, in_file, out_file, password, key_length=32):
+       bs = AES.block_size
+       salt = in_file.read(bs)[len('Salted__'):]
+       key, iv = derive_key_and_iv(password, salt, key_length, bs)
+       cipher = AES.new(key, AES.MODE_CBC, iv)
+       next_chunk = ''
+       finished = False
+       while not finished:
+           chunk, next_chunk = next_chunk, cipher.decrypt(in_file.read(1024 * bs))
+           if len(next_chunk) == 0:
+               padding_length = ord(chunk[-1])
+               chunk = chunk[:-padding_length]
+               finished = True
+           out_file.write(chunk)
+
+   def encrypt_original(self, in_file, out_file, password, key_length=32):
+       bs = AES.block_size
+       salt = Random.new().read(bs - len('Salted__'))
+       key, iv = derive_key_and_iv(password, salt, key_length, bs)
+       cipher = AES.new(key, AES.MODE_CBC, iv)
+       out_file.write('Salted__' + salt)
+       finished = False
+       while not finished:
+           chunk = in_file.read(1024 * bs)
+           if len(chunk) == 0 or len(chunk) % bs != 0:
+               padding_length = (bs - len(chunk) % bs) or bs
+               chunk += padding_length * chr(padding_length)
+               finished = True
+           out_file.write(cipher.encrypt(chunk))
+
+def derive_key_and_iv(password, salt, key_length, iv_length):
+    d = d_i = ''
+    while len(d) < key_length + iv_length:
+        d_i = md5(d_i + password + salt).digest()
+        d += d_i
+    return d[:key_length], d[key_length:key_length+iv_length]
 
 class DialogExample(Gtk.Dialog):
     def __init__(self, parent):
@@ -342,8 +464,6 @@ class DialogExample(Gtk.Dialog):
         box = self.get_content_area()
         box.add(label)
         self.show_all()
-
-
 
 win = MyWindow()
 win.connect("delete-event", Gtk.main_quit)

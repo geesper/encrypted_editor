@@ -32,6 +32,12 @@ class MyWindow(Gtk.Window):
       self.create_right_click_menu()
       self.add(self.grid)
 
+      css = Gtk.CssProvider()
+      css.load_from_path('style.css')
+      screen = Gdk.Screen.get_default()
+      style = Gtk.StyleContext()
+      style.add_provider_for_screen(screen, css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
       # Used for the clipboard:
       self.clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
       self.clipboard_mouse = Gtk.Clipboard.get(Gdk.SELECTION_PRIMARY)
@@ -72,6 +78,7 @@ class MyWindow(Gtk.Window):
        show_password.connect("toggled", self.show_password)
        show_password.set_active(False)
        self.password_area = Gtk.Grid()
+       #self.password_area.set_name("password_area")
        self.password_area.add(username_label)
        self.password_area.attach_next_to(self.username_text, username_label, Gtk.PositionType.RIGHT, 1, 1)
        self.password_area.attach_next_to(password_label, username_label, Gtk.PositionType.BOTTOM, 1, 1)
@@ -117,6 +124,7 @@ class MyWindow(Gtk.Window):
        self.scrolledwindow.set_vexpand(True)
        self.grid.attach(self.scrolledwindow, 1, 1, 1, 1)
        self.textview = Gtk.TextView()
+       self.textview.set_name("editor")
        self.textbuffer = self.textview.get_buffer()
        self.textbuffer.connect("changed", self.edit_changed)
        self.scrolledwindow.add(self.textview)

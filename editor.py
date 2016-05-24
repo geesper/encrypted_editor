@@ -1,5 +1,5 @@
 #!/usr/bin/python
-#
+
 # http://www.objgen.com/json/models/Avn
 
 import json
@@ -22,6 +22,7 @@ password = "password"
 class MyWindow(Gtk.Window):
    def __init__(self):
       Gtk.Window.__init__(self, title="Encrypted Notebook")
+      password_prompt(self, "Please enter your password to unlock.", "Password")
       self.grid = Gtk.Grid()
       # Load in data:
       self.load_data_from_file(load_file)
@@ -134,12 +135,35 @@ class MyWindow(Gtk.Window):
       self.right_click_menu = Gtk.Menu()
       add_password = Gtk.MenuItem("Add Password")
       add_password.connect("button_release_event", self.add_password)
-      self.right_click_menu.append(add_password)
       add_entry = Gtk.MenuItem("Add New Entry")
       add_entry.connect("button_release_event", self.add_entry)
+      delete_entry = Gtk.MenuItem("Delete Entry")
+      delete_entry.connect("button_release_event", self.delete_entry)
+      self.right_click_menu.append(add_password)
       self.right_click_menu.append(add_entry)
+      self.right_click_menu.append(delete_entry)
       self.right_click_menu.show_all()
 
+
+   def delete_entry(self, widget, value):
+      self.right_click_menu.hide()
+      delete_confirmation = Gtk.MessageDialog(self, 0, Gtk.MessageType.WARNING, Gtk.ButtonsType.YES_NO, "Are you sure you wish to delete this entry?\n\n%s" %(self.current_item['name']))
+      response = delete_confirmation.run()
+      if response == Gtk.ResponseType.YES:
+         path = Gtk.TreePath(self.sidebar_current_selection)
+         treeiter = self.listmodel.get_iter(path)
+         label_name = self.listmodel.get_value(treeiter, 0)
+         label_value = self.listmodel.get_value(treeiter, 1)
+         found = False
+         for item in self.data['encrypted_item']:
+            if str(item['id']) == label_value:
+               print(str(item))
+               self.data['encrypted_item'].remove(item)
+         self.listmodel.remove(treeiter)
+         self.encrypt(json.dumps(self.data), load_file, password)
+      else:   
+         print("Not deleting!") 
+      delete_confirmation.destroy()
 
    def add_entry(self, widget, value):
       self.listmodel.append(["New Entry", "none"])
@@ -258,7 +282,9 @@ class MyWindow(Gtk.Window):
    # Loads the data from the encrypted file.
    def load_data_from_file(self, file_name):
        if not os.path.isfile(file_name):
+          print("Could not find file, so setting up the example...")
           content = open('encrypted_file_example.txt')
+          print("Going to encrypt example using: %s" %(password))
           self.encrypt(content.read(), file_name, password)
        encrypted_file = self.decrypt(file_name, password)
        self.data = yaml.safe_load(StringIO(encrypted_file))
@@ -464,6 +490,35 @@ class DialogExample(Gtk.Dialog):
         box = self.get_content_area()
         box.add(label)
         self.show_all()
+
+def password_prompt(parent, message, title=''):
+   password_popup = Gtk.MessageDialog(parent,
+                                    Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                                    Gtk.MessageType.QUESTION,
+                                    Gtk.ButtonsType.OK_CANCEL,
+                                    message)
+
+   password_popup.set_title(title)
+   password_dialog = password_popup.get_content_area()
+   password_entry = Gtk.Entry()
+   password_entry.set_visibility(False)
+   password_entry.set_invisible_char("*")
+   password_entry.set_size_request(10,0)
+   password_entry.set_activates_default(True)
+   password_ok_button = password_popup.get_widget_for_response(response_id=Gtk.ResponseType.OK)
+   password_ok_button.set_can_default(True)
+   password_ok_button.grab_default()
+   password_dialog.pack_end(password_entry, False, False, 0)
+   password_popup.show_all()
+   response = password_popup.run()
+   if (response == Gtk.ResponseType.OK) and (password_entry.get_text() != ''):
+      global password
+      password = password_entry.get_text().strip()
+      password_popup.destroy()
+      return
+   else:
+      quit()
+
 
 win = MyWindow()
 win.connect("delete-event", Gtk.main_quit)

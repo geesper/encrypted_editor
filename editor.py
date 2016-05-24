@@ -287,7 +287,11 @@ class MyWindow(Gtk.Window):
           print("Going to encrypt example using: %s" %(password))
           self.encrypt(content.read(), file_name, password)
        encrypted_file = self.decrypt(file_name, password)
-       self.data = yaml.safe_load(StringIO(encrypted_file))
+       try:
+          self.data = yaml.safe_load(StringIO(encrypted_file))
+       except Exception:
+          self.error("Unable to read data from file. Please check your password and try again.")
+          quit()
 
 
    # This handles if an entry is renamed:
@@ -471,6 +475,13 @@ class MyWindow(Gtk.Window):
                chunk += padding_length * chr(padding_length)
                finished = True
            out_file.write(cipher.encrypt(chunk))
+
+   def error(self, message):
+      error_dialog = Gtk.MessageDialog(self, 0, Gtk.MessageType.ERROR,Gtk.ButtonsType.CANCEL, "Error")
+      error_dialog.format_secondary_text(message)
+      error_dialog.run()
+      error_dialog.destroy()
+
 
 def derive_key_and_iv(password, salt, key_length, iv_length):
     d = d_i = ''

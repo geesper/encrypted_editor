@@ -96,7 +96,7 @@ class MyWindow(Gtk.Window):
        show_password.connect("toggled", self.show_password)
        show_password.set_active(False)
        self.password_area = Gtk.Grid()
-       #self.password_area.set_name("password_area")
+       self.password_area.set_name("password_area")
        self.password_area.add(username_label)
        self.password_area.attach_next_to(self.username_text, username_label, Gtk.PositionType.RIGHT, 1, 1)
        self.password_area.attach_next_to(password_label, username_label, Gtk.PositionType.BOTTOM, 1, 1)
@@ -147,6 +147,7 @@ class MyWindow(Gtk.Window):
        self.textbuffer.connect("changed", self.edit_changed)
        self.scrolledwindow.add(self.textview)
        self.textview.set_editable(False)
+       self.scrolledwindow
 
    def create_right_click_menu(self):
       self.right_click_menu = Gtk.Menu()
@@ -551,6 +552,7 @@ def password_prompt(parent, message, title=''):
 
 
 win = MyWindow()
+win.set_default_size(800,600)
 win.connect("delete-event", Gtk.main_quit)
 win.startup()
 Gtk.main()

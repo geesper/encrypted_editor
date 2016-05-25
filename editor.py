@@ -48,6 +48,23 @@ class MyWindow(Gtk.Window):
       self.sidebar_current_selection = 0
       self.sidebar_locked = False
 
+      # Set keyboard shortcuts
+      shortcuts = Gtk.AccelGroup()
+      self.add_accel_group(shortcuts)
+      # Control S for saving
+      key, mod = Gtk.accelerator_parse('<Control>s')
+      self.save_button.add_accelerator('activate', shortcuts, key, mod, Gtk.AccelFlags.VISIBLE)
+
+      # Escape for cancel
+      key, mod = Gtk.accelerator_parse('Escape')
+      self.cancel_button.add_accelerator('activate', shortcuts, key, mod, Gtk.AccelFlags.VISIBLE)
+
+      # Control N for New Note
+      key, mod = Gtk.accelerator_parse('<Control>n')
+      self.add_new_entry_selection.add_accelerator('activate', shortcuts, key, mod, Gtk.AccelFlags.VISIBLE)
+      #self.add_new_entry_selection.connect("button_release_event", self.add_entry)
+
+
    # This ensures that the areas we want hidden at startup are not showing.
    def startup(self):
        win.show_all()
@@ -135,12 +152,12 @@ class MyWindow(Gtk.Window):
       self.right_click_menu = Gtk.Menu()
       add_password = Gtk.MenuItem("Add Password")
       add_password.connect("button_release_event", self.add_password)
-      add_entry = Gtk.MenuItem("Add New Entry")
-      add_entry.connect("button_release_event", self.add_entry)
+      self.add_new_entry_selection = Gtk.MenuItem("Add New Entry")
+      self.add_new_entry_selection.connect("activate", self.add_entry)
       delete_entry = Gtk.MenuItem("Delete Entry")
       delete_entry.connect("button_release_event", self.delete_entry)
       self.right_click_menu.append(add_password)
-      self.right_click_menu.append(add_entry)
+      self.right_click_menu.append(self.add_new_entry_selection)
       self.right_click_menu.append(delete_entry)
       self.right_click_menu.show_all()
 
@@ -165,7 +182,7 @@ class MyWindow(Gtk.Window):
          print("Not deleting!") 
       delete_confirmation.destroy()
 
-   def add_entry(self, widget, value):
+   def add_entry(self, widget, value=None):
       self.listmodel.append(["New Entry", "none"])
       self.current_item = "Adding New Entry"
       self.populate_fields()
@@ -380,6 +397,7 @@ class MyWindow(Gtk.Window):
           self.password_text.set_text(self.current_item['login']['password'])
           self.textbuffer.set_text(self.current_item['text'])
           self.sidebar_reset_edit()
+       self.hide_save()
 
 
    # This is used after hitting a cancel button to ensure all entries present

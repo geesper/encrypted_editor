@@ -183,14 +183,15 @@ class MyWindow(Gtk.Window):
       delete_confirmation.destroy()
 
    def add_entry(self, widget, value=None):
-      self.listmodel.append(["New Entry", "none"])
-      self.current_item = "Adding New Entry"
-      self.populate_fields()
-      self.show_save()
-      self.sidebar_current_selection = len(self.listmodel) - 1
-      self.sidebar_locked = False # Included to force selection to change to the "New entry" on the sidebar
-      self.sidebar_select_number(self.sidebar_current_selection)
-      self.sidebar_locked = True
+      if self.sidebar_locked != True:
+         self.listmodel.append(["New Entry", "none"])
+         self.current_item = "Adding New Entry"
+         self.populate_fields()
+         self.show_save()
+         self.sidebar_current_selection = len(self.listmodel) - 1
+         self.sidebar_locked = False # Included to force selection to change to the "New entry" on the sidebar
+         self.sidebar_select_number(self.sidebar_current_selection)
+         self.sidebar_locked = True
 
    # This is called to determine if the edit box was changed.
    def edit_changed(self, widget):

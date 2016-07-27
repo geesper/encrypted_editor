@@ -1,15 +1,62 @@
-GtkEntry {
+#gaGtkEntry {
       background: #56f9a0;
-      color: blue;
+      margin: 50px;
 }
+
 #editor {
-      padding: 5px;
+      border-left: 1px solid grey;
+}
+
+#sidebar {
+      background: #e6e6e6;
+}
+
+#sidebar:selected {
+      background: #6495ed;
+      color: white;
+}
+
+
+gGtkTreeView row .button {
+      background: #000000;
+}
+
+gGtkTreeView row {
+      background: #e6e6e6;
+}
+
+gGtkTreeView column-header .button {
+      font: bold;
+      background: #e6e6e6;
+      color: grey;
+      border-width: 1px;
+      border-color: grey;
+}
+
+gGtkTreeView column-header {
+      border-width: 1px;
+      border-color: grey;
+      
+}
+
+#dmain_grid {
+	background: grey;
 }
 
 #password_area {
-      font-size: small;
-      padding: 10px;
-      padding-left: 150px;
+      margin: 10 10 10 10;
+      background: #e6e6e6;
+      border-bottom-width: 1px;
+      border-style: solid;
+      border-color: grey;
 }
 
+GtkGrid {
+      margin: 50px 50px 50px 50px;
+}
+
+#password_entry {
+      padding: 10px;
+      margin: 10px 10px 10px 10px;
+}
 

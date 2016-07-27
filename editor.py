@@ -23,7 +23,8 @@ class MyWindow(Gtk.Window):
    def __init__(self):
       Gtk.Window.__init__(self, title="Encrypted Notebook")
       password_prompt(self, "Please enter your password to unlock.", "Password")
-      self.grid = Gtk.Grid()
+      self.grid = Gtk.Grid(column_spacing=1)
+      self.grid.set_name("main_grid")
       # Load in data:
       self.load_data_from_file(load_file)
       self.create_password_area()
@@ -72,7 +73,7 @@ class MyWindow(Gtk.Window):
        self.password_area.hide()
 
    def create_save_cancel(self):
-       self.save_cancel_area = Gtk.Grid()
+       self.save_cancel_area = Gtk.Grid(column_spacing = 5)
        self.save_button = Gtk.Button(label="Save")
        self.cancel_button = Gtk.Button(label="Cancel")
        self.save_button.connect("clicked", self.save_button_clicked)
@@ -84,10 +85,10 @@ class MyWindow(Gtk.Window):
 
 
    def create_password_area(self):
-       username_label = Gtk.Label(label="User name")
+       self.username_label = Gtk.Label(label="User name")
        self.username_text = Gtk.Entry()
        self.username_text.connect("changed", self.edit_changed)
-       password_label = Gtk.Label(label="Password")
+       self.password_label = Gtk.Label(label="Password")
        self.password_text = Gtk.Entry()
        self.password_text.set_visibility(False)
        self.password_text.connect("copy-clipboard", self.copy_password)
@@ -95,13 +96,16 @@ class MyWindow(Gtk.Window):
        show_password = Gtk.CheckButton("show")
        show_password.connect("toggled", self.show_password)
        show_password.set_active(False)
-       self.password_area = Gtk.Grid()
+       self.password_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+       password_grid = Gtk.Grid(column_spacing=5, row_spacing = 5)
        self.password_area.set_name("password_area")
-       self.password_area.add(username_label)
-       self.password_area.attach_next_to(self.username_text, username_label, Gtk.PositionType.RIGHT, 1, 1)
-       self.password_area.attach_next_to(password_label, username_label, Gtk.PositionType.BOTTOM, 1, 1)
-       self.password_area.attach_next_to(self.password_text, password_label, Gtk.PositionType.RIGHT, 1, 1)
-       self.password_area.attach_next_to(show_password, self.password_text, Gtk.PositionType.RIGHT, 1, 1)
+       password_grid.add(self.username_label)
+       password_grid.attach_next_to(self.username_text, self.username_label, Gtk.PositionType.RIGHT, 1, 1)
+       password_grid.attach_next_to(self.password_label, self.username_label, Gtk.PositionType.BOTTOM, 1, 1)
+       password_grid.attach_next_to(self.password_text, self.password_label, Gtk.PositionType.RIGHT, 1, 1)
+       password_grid.attach_next_to(show_password, self.password_text, Gtk.PositionType.RIGHT, 1, 1)
+       self.password_area.add(password_grid)
+       self.password_area.set_child_packing(password_grid, True, False, 5, Gtk.PackType.START)
        self.grid.attach(self.password_area, 1, 0, 1, 1)
 
    def create_side_bar(self):
@@ -110,6 +114,7 @@ class MyWindow(Gtk.Window):
        for entry in self.data['encrypted_item']:
           self.listmodel.append([entry['name'], str(entry['id'])])
        self.side_bar_box = Gtk.TreeView.new_with_model(self.listmodel)
+       self.side_bar_box.props.headers_visible = False
 
 
        # Setting up side_bar function for when text is edited:
@@ -134,6 +139,7 @@ class MyWindow(Gtk.Window):
        self.side_bar_box.connect("button_release_event", self.side_bar_button_right_clicked)
 
        self.side_bar_box.set_activate_on_single_click(True)
+       self.side_bar_box.set_name("sidebar")
        self.grid.attach(self.side_bar_box, 0, 0, 1,2)
 
    def create_notes_area(self):
@@ -142,12 +148,16 @@ class MyWindow(Gtk.Window):
        self.scrolledwindow.set_vexpand(True)
        self.grid.attach(self.scrolledwindow, 1, 1, 1, 1)
        self.textview = Gtk.TextView()
-       self.textview.set_name("editor")
+       self.textview.props.top_margin = 10
+       self.textview.props.bottom_margin = 10
+       self.textview.props.left_margin = 10
+       self.textview.props.right_margin = 10
+       self.scrolledwindow.set_name("editor")
+       self.scrolledwindow.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
        self.textbuffer = self.textview.get_buffer()
        self.textbuffer.connect("changed", self.edit_changed)
        self.scrolledwindow.add(self.textview)
        self.textview.set_editable(False)
-       self.scrolledwindow
 
    def create_right_click_menu(self):
       self.right_click_menu = Gtk.Menu()
@@ -175,7 +185,7 @@ class MyWindow(Gtk.Window):
          found = False
          for item in self.data['encrypted_item']:
             if str(item['id']) == label_value:
-               print(str(item))
+               #print(str(item))
                self.data['encrypted_item'].remove(item)
          self.listmodel.remove(treeiter)
          self.encrypt(json.dumps(self.data), load_file, password)
@@ -303,7 +313,7 @@ class MyWindow(Gtk.Window):
        if not os.path.isfile(file_name):
           print("Could not find file, so setting up the example...")
           content = open('encrypted_file_example.txt')
-          print("Going to encrypt example using: %s" %(password))
+          #print("Going to encrypt example using: %s" %(password))
           self.encrypt(content.read(), file_name, password)
        encrypted_file = self.decrypt(file_name, password)
        try:
